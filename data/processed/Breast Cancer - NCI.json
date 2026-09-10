@@ -1,0 +1,42 @@
+{
+    "source": "Breast Cancer - NCI.pdf",
+    "path": "data\\raw\\nci\\Breast Cancer - NCI.pdf",
+    "pages": [
+        {
+            "page": 1,
+            "text": "Breast Cancer\nBreast cancer is the second most common cancer in women after skin cancer.\nMammograms can detect breast cancer early, possibly before it has spread. Explore the\nlinks on this page to learn more about breast cancer prevention, screening, treatment,\nstatistics, research, clinical trials, and more.\nWhat Is Breast Cancer?\nLearn about how breast cancer begins and who can get it.\n1/9"
+        },
+        {
+            "page": 2,
+            "text": "Breast Cancer Types\nLearn more about different types of breast cancer and access in-depth information\nfor the most common types.\nCauses and Risk Factors\nLearn about causes of breast cancer and factors that increase your risk.\n2/9"
+        },
+        {
+            "page": 3,
+            "text": "Signs & Symptoms\nLearn about the signs and symptoms of breast cancer and what to do if you find a\nchange in your breast.\nScreening\n3/9"
+        },
+        {
+            "page": 4,
+            "text": "Learn more about screening for breast cancer.\nDiagnosis\nLearn about tests used to diagnose and stage breast cancer.\n4/9"
+        },
+        {
+            "page": 5,
+            "text": "Breast Cancer Stages\nLearn about breast cancer stages and how they are determined.\nTreatment\nLearn about local and systemic treatments and access in-depth information about\neach type of treatment.\n5/9"
+        },
+        {
+            "page": 6,
+            "text": "Prognosis & Survival Rates\nLearn more about understanding your prognosis.\nBreast Cancer Survivorship\n6/9"
+        },
+        {
+            "page": 7,
+            "text": "Learn about issues you may face after treatment and resources available to help you\ncope.\nMale Breast Cancer\nLearn about risk factors for male breast cancer, symptoms, diagnosis, and more.\n7/9"
+        },
+        {
+            "page": 8,
+            "text": "Breast Lumps in Children\nLearn about types of breast lumps found in children and their symptoms, diagnosis,\nand treatment.\nBreast Cancer During Pregnancy\nLearn about diagnosing and treating breast cancer in women who are pregnant or\nbreastfeeding.\n8/9"
+        },
+        {
+            "page": 9,
+            "text": "Advances in Breast Cancer Research\nWhat's new in clinical advances, research findings, and NCI programs that are\nleading to progress in finding and treating breast cancer.\n9/9"
+        }
+    ]
+}
