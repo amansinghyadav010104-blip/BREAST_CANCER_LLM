@@ -1,5 +1,6 @@
 from hybrid_retriever import hybrid_retrieve
 from llm_generator import generate_answer
+from safety_guardrails import check_safety
 
 
 def run_rag_pipeline(question):
@@ -25,6 +26,20 @@ def run_rag_pipeline(question):
 
     print("\nUser Question:")
     print(question)
+    
+        # Step 0: Safety check
+    safety_result = check_safety(question)
+
+    if not safety_result["safe"]:
+        print("\nSafety Guardrail Triggered")
+        print("Risk Type:", safety_result["risk_type"])
+
+        return {
+            "question": question,
+            "source": "safety_guardrail",
+            "answer": safety_result["message"],
+            "context": ""
+        }
 
     # Step 1: Hybrid retrieval
     retrieval_result = hybrid_retrieve(question)

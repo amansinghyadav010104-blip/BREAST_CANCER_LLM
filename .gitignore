@@ -1,1 +1,49 @@
-.env
+# Python virtual environment
+.venv/
+venv/
+env/
+
+# Environment variables / API keys
+
+.env.*
+
+# Python cache
+
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# Generated data
+
+data/embeddings/
+
+# Vector database
+
+# Model files
+models/
+*.pt
+*.pth
+*.bin
+*.safetensors
+
+# Output files
+outputs/
+
+# Logs
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# VS Code
+.vscode/
+
+# Python packaging
+*.egg-info/
+dist/
+build/
+
+# Temporary files
+*.tmp
+*.temp

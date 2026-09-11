@@ -7,22 +7,21 @@ def clean_text(text):
     important medical information.
     """
 
-    # -----------------------------------------
-    # 1. Replace unusual PDF characters
-    # -----------------------------------------
+    # ---------------------------------------------------------
+    # 1. Normalize special characters
+    # ---------------------------------------------------------
+
     text = text.replace("￾", "-")
     text = text.replace("–", "-")
     text = text.replace("—", "-")
+    text = text.replace("\xa0", " ")
 
 
-    # -----------------------------------------
-    # 2. Fix words broken across lines
-    # Example:
-    # treat-
-    # ment
-    # becomes:
-    # treatment
-    # -----------------------------------------
+    # ---------------------------------------------------------
+    # 2. Join words split across PDF lines
+    # Example: treat-\nment -> treatment
+    # ---------------------------------------------------------
+
     text = re.sub(
         r"(\w)-\s*\n\s*(\w)",
         r"\1\2",
@@ -30,14 +29,9 @@ def clean_text(text):
     )
 
 
-    # -----------------------------------------
-    # 3. Remove NCI PDF footer
-    # -----------------------------------------
-    text = re.sub(
-        r"\d{2}/\d{2}/\d{4},.*?\n",
-        "",
-        text
-    )
+    # ---------------------------------------------------------
+    # 3. Remove URLs
+    # ---------------------------------------------------------
 
     text = re.sub(
         r"https?://\S+",
@@ -46,35 +40,91 @@ def clean_text(text):
     )
 
 
-    # -----------------------------------------
-    # 4. Fix words joined together
-    # Example:
-    # recurrenceof → recurrence of
-    # inthe → in the
-    # -----------------------------------------
-    replacements = {
-        "recurrenceof": "recurrence of",
-        "triple-negativebreast": "triple-negative breast",
+    # ---------------------------------------------------------
+    # 4. Fix known PDF word-joining problems
+    # ---------------------------------------------------------
+
+    fixes = {
+        "suchaschemotherapy": "such as chemotherapy",
+        "suchas": "such as",
+        "foreach": "for each",
+        "partofyour": "part of your",
+        "partof": "part of",
+        "commonside": "common side",
+        "optionsand": "options and",
+        "mayinclude": "may include",
+
         "inthemilk": "in the milk",
-        "aboutthe": "about the",
-        "forthe": "for the",
-        "ofthe": "of the",
-        "withthe": "with the",
-        "andthe": "and the",
         "inthe": "in the",
         "onthe": "on the",
-        "tothe": "to the",
+        "ofthe": "of the",
+        "forthe": "for the",
         "fromthe": "from the",
-        "mayinclude": "may include",
+        "withthe": "with the",
+        "andthe": "and the",
+        "tothe": "to the",
+        "aboutthe": "about the",
+        "yourcancer": "your cancer",
+
+        "cancertreatment": "cancer treatment",
+        "breastcancer": "breast cancer",
+        "cancercells": "cancer cells",
+        "treatmentoptions": "treatment options",
+        "treatmentplan": "treatment plan",
+        "treatmentfor": "treatment for",
+        "treatmentapproaches": "treatment approaches",
+        "typesof": "types of",
+        "typeof": "type of",
+        "caninclude": "can include",
+        "sideeffects": "side effects",
+
+        "radiationtherapy": "radiation therapy",
+        "hormonetherapy": "hormone therapy",
+        "targetedtherapy": "targeted therapy",
+
+        "triple-negativebreast": "triple-negative breast",
+        "ductalcarcinoma": "ductal carcinoma",
+        "inflammatorybreast": "inflammatory breast",
     }
 
-    for old, new in replacements.items():
-        text = text.replace(old, new)
+
+    for old, new in fixes.items():
+        text = re.sub(
+            re.escape(old),
+            new,
+            text,
+            flags=re.IGNORECASE
+        )
 
 
-    # -----------------------------------------
-    # 5. Remove excessive spaces
-    # -----------------------------------------
+    # ---------------------------------------------------------
+    # 5. Remove NCI timestamp/footer
+    # ---------------------------------------------------------
+
+    text = re.sub(
+        r"\d{2}/\d{2}/\d{4},\s*\d{2}:\d{2}\s+Treatment for Breast Cancer - NCI",
+        "",
+        text,
+        flags=re.IGNORECASE
+    )
+
+
+    # ---------------------------------------------------------
+    # 6. Remove PDF page numbers
+    # ---------------------------------------------------------
+
+    text = re.sub(
+        r"^\s*\d+/\d+\s*$",
+        "",
+        text,
+        flags=re.MULTILINE
+    )
+
+
+    # ---------------------------------------------------------
+    # 7. Normalize spaces
+    # ---------------------------------------------------------
+
     text = re.sub(
         r"[ \t]+",
         " ",
@@ -82,28 +132,10 @@ def clean_text(text):
     )
 
 
-    # -----------------------------------------
-    # 6. Remove spaces at beginning/end
-    # -----------------------------------------
-    text = "\n".join(
-        line.strip()
-        for line in text.splitlines()
-    )
+    # ---------------------------------------------------------
+    # 8. Remove whitespace before punctuation
+    # ---------------------------------------------------------
 
-
-    # -----------------------------------------
-    # 7. Remove excessive blank lines
-    # -----------------------------------------
-    text = re.sub(
-        r"\n{3,}",
-        "\n\n",
-        text
-    )
-
-
-    # -----------------------------------------
-    # 8. Remove spaces before punctuation
-    # -----------------------------------------
     text = re.sub(
         r"\s+([,.!?;:])",
         r"\1",
@@ -111,27 +143,25 @@ def clean_text(text):
     )
 
 
+    # ---------------------------------------------------------
+    # 9. Clean individual lines
+    # ---------------------------------------------------------
+
+    text = "\n".join(
+        line.strip()
+        for line in text.splitlines()
+    )
+
+
+    # ---------------------------------------------------------
+    # 10. Remove excessive blank lines
+    # ---------------------------------------------------------
+
+    text = re.sub(
+        r"\n{3,}",
+        "\n\n",
+        text
+    )
+
+
     return text.strip()
-
-
-if __name__ == "__main__":
-
-    sample_text = """
-    Breast   Cancer     Treatment
-
-    recurrenceof certain types of breast cancer.
-
-    triple-negativebreast cancer.
-
-    inthemilk ducts.
-
-    29/08/2026, 21:36 Treatment for Breast Cancer - NCI
-    https://www.cancer.gov/types/breast/treatment
-
-    """
-
-    cleaned = clean_text(sample_text)
-
-    print("CLEANED TEXT")
-    print("=" * 60)
-    print(cleaned)

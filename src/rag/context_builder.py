@@ -1,22 +1,24 @@
 def build_context(local_results=None, web_results=None):
     """
-    Combine retrieved local documents and web search results
-    into a single context for the LLM.
+    Build structured evidence context for the LLM.
+
+    Each evidence item receives a unique ID so that
+    the LLM can clearly identify its sources.
     """
 
     context_parts = []
 
+    evidence_number = 1
+
     if local_results:
-        context_parts.append(
-            "LOCAL KNOWLEDGE BASE SOURCES"
-        )
+        context_parts.append("LOCAL KNOWLEDGE BASE EVIDENCE")
 
-        for i, result in enumerate(local_results, start=1):
-
+        for result in local_results:
             context_parts.append(
                 f"""
-Source {i}
-Title: {result.get('source', '')}
+[EVIDENCE {evidence_number}]
+
+Source: {result.get('source', '')}
 Page: {result.get('page', '')}
 Similarity Score: {result.get('score', 0.0):.4f}
 
@@ -25,16 +27,16 @@ Content:
 """
             )
 
+            evidence_number += 1
+
     if web_results:
-        context_parts.append(
-            "\nWEB SEARCH SOURCES"
-        )
+        context_parts.append("\nTRUSTED WEB EVIDENCE")
 
-        for i, result in enumerate(web_results, start=1):
-
+        for result in web_results:
             context_parts.append(
                 f"""
-Web Source {i}
+[EVIDENCE {evidence_number}]
+
 Title: {result.get('title', '')}
 URL: {result.get('url', '')}
 Search Score: {result.get('score', 0.0):.4f}
@@ -43,6 +45,8 @@ Content:
 {result.get('content', '')}
 """
             )
+
+            evidence_number += 1
 
     if not context_parts:
         return "No relevant evidence was retrieved."
@@ -63,10 +67,10 @@ if __name__ == "__main__":
 
     test_web_results = [
         {
-            "title": "Breast Cancer Guidelines",
-            "url": "https://pubmed.ncbi.nlm.nih.gov/",
-            "score": 0.80,
-            "content": "Recent research discusses updates in breast cancer treatment guidelines."
+            "title": "NCCN Guidelines for Patients",
+            "url": "https://www.nccn.org/",
+            "score": 0.8955,
+            "content": "Treatment recommendations for invasive breast cancer."
         }
     ]
 
@@ -78,5 +82,4 @@ if __name__ == "__main__":
     print("=" * 60)
     print("GENERATED CONTEXT")
     print("=" * 60)
-
     print(context)
