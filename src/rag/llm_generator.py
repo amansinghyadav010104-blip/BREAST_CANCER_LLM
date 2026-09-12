@@ -2,6 +2,7 @@ import os
 
 from dotenv import load_dotenv
 from google import genai
+from user_mode import UserMode, get_mode_instructions
 
 load_dotenv()
 
@@ -17,13 +18,23 @@ client = genai.Client(
 )
 
 
-def generate_answer(question, context):
+def generate_answer(question, context, mode=UserMode.PATIENT):
     """
     Generate an evidence-grounded answer using Gemini.
+
+    Parameters:
+        question: User's question
+        context: Retrieved evidence
+        mode: UserMode.PATIENT or UserMode.DOCTOR
     """
+
+    # Get instructions according to the selected user mode
+    mode_instructions = get_mode_instructions(mode)
 
     prompt = f"""
 You are a breast cancer clinical support and patient education assistant.
+
+{mode_instructions}
 
 Your task is to answer the user's question using ONLY the evidence
 provided below.
@@ -127,13 +138,24 @@ Breast cancer is a disease in which cells in the breast
 grow uncontrollably.
 """
 
-    answer = generate_answer(
+    print("\nTesting Patient Mode...")
+    patient_answer = generate_answer(
         question,
-        context
+        context,
+        mode=UserMode.PATIENT
     )
 
-    print("\nQUESTION:")
-    print(question)
+    print("\nPATIENT MODE ANSWER:")
+    print(patient_answer)
 
-    print("\nANSWER:")
-    print(answer)
+    print("\n" + "=" * 60)
+
+    print("\nTesting Doctor Mode...")
+    doctor_answer = generate_answer(
+        question,
+        context,
+        mode=UserMode.DOCTOR
+    )
+
+    print("\nDOCTOR MODE ANSWER:")
+    print(doctor_answer)

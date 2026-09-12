@@ -1,23 +1,25 @@
-# Python virtual environment
+# Python virtual environments
 .venv/
 venv/
 env/
 
-# Environment variables / API keys
-
+# Environment variables and API keys
+.env
 .env.*
+.env.local
 
-# Python cache
-
+# Python cache files
+__pycache__/
+*.pyc
 
 # Jupyter Notebook checkpoints
 .ipynb_checkpoints/
 
-# Generated data
-
-data/embeddings/
+# Generated embeddings
+data/processed/embeddings/
 
 # Vector database
+vector_db/
 
 # Model files
 models/
@@ -32,7 +34,7 @@ outputs/
 # Logs
 *.log
 
-# OS files
+# Operating system files
 .DS_Store
 Thumbs.db
 
