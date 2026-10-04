@@ -2,7 +2,7 @@ import os
 
 from dotenv import load_dotenv
 from google import genai
-from user_mode import UserMode, get_mode_instructions
+from .user_mode import UserMode, get_mode_instructions
 
 load_dotenv()
 

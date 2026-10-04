@@ -100,7 +100,7 @@ def build_vector_database():
     # Save FAISS index
     # -----------------------------------------
 
-    index_path = VECTOR_DB_DIR / "breast_cancer.index"
+    index_path = VECTOR_DB_DIR / "index.faiss"
 
     faiss.write_index(
         index,

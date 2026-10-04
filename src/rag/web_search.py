@@ -2,7 +2,7 @@ import os
 
 from dotenv import load_dotenv
 from tavily import TavilyClient
-from source_filter import filter_trusted_results
+from .source_filter import filter_trusted_results
 
 
 # -----------------------------------------

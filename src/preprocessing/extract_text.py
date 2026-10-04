@@ -1,7 +1,7 @@
 from pathlib import Path
 
 from pypdf import PdfReader
-from clean_text import clean_text
+from .clean_text import clean_text
 
 
 def extract_pdf_text(pdf_path):

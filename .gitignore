@@ -1,5 +1,6 @@
 # Python virtual environments
 .venv/
+.venv-1/
 venv/
 env/
 
@@ -7,10 +8,15 @@ env/
 .env
 .env.*
 .env.local
+!.env.example
+
+# Streamlit secrets
+.streamlit/secrets.toml
 
 # Python cache files
 __pycache__/
-*.pyc
+*.py[cod]
+*$py.class
 
 # Jupyter Notebook checkpoints
 .ipynb_checkpoints/
@@ -27,9 +33,11 @@ models/
 *.pth
 *.bin
 *.safetensors
+*.onnx
 
 # Output files
 outputs/
+results/
 
 # Logs
 *.log
@@ -37,6 +45,7 @@ outputs/
 # Operating system files
 .DS_Store
 Thumbs.db
+Desktop.ini
 
 # VS Code
 .vscode/
@@ -45,7 +54,17 @@ Thumbs.db
 *.egg-info/
 dist/
 build/
+. Python-version
 
 # Temporary files
 *.tmp
 *.temp
+*.bak
+*.swp
+
+# Test and type-check caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/

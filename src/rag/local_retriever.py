@@ -12,7 +12,7 @@ from sentence_transformers import SentenceTransformer
 
 VECTOR_DB_DIR = Path("vector_db")
 
-INDEX_PATH = VECTOR_DB_DIR / "breast_cancer.index"
+INDEX_PATH = VECTOR_DB_DIR / "index.faiss"
 METADATA_PATH = VECTOR_DB_DIR / "metadata.json"
 
 

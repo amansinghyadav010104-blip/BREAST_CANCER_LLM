@@ -1,7 +1,7 @@
 from pathlib import Path
 import json
 
-from extract_text import extract_pdf_text
+from .extract_text import extract_pdf_text
 
 
 RAW_DIR = Path("data/raw")

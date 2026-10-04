@@ -1,7 +1,7 @@
-from local_retriever import retrieve_documents
-from relevance_checker import check_relevance
-from web_search import web_search
-from context_builder import build_context
+from .local_retriever import retrieve_documents
+from .relevance_checker import check_relevance
+from .web_search import web_search
+from .context_builder import build_context
 
 
 LOCAL_TOP_K = 5
