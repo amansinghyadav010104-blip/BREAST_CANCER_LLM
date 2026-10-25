@@ -51,13 +51,14 @@ TRUSTED_DOMAINS = [
 # Web Search Function
 # -----------------------------------------
 
-def web_search(query, max_results=5):
+def web_search(query, max_results=5, timeout=6.0):
 
     response = client.search(
         query=query,
         search_depth="advanced",
         max_results=max_results,
-        include_domains=TRUSTED_DOMAINS
+        include_domains=TRUSTED_DOMAINS,
+        timeout=timeout,
     )
 
     results = []

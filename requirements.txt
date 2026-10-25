@@ -9,3 +9,5 @@ sentence-transformers
 python-dotenv
 tavily-python
 google-genai
+streamlit==1.65.0
+python-docx==1.2.0

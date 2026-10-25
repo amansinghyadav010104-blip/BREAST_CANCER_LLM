@@ -1,4 +1,7 @@
-def build_context(local_results=None, web_results=None):
+import re
+
+
+def build_context(local_results=None, web_results=None, uploaded_results=None):
     """
     Build structured evidence context for the LLM.
 
@@ -29,6 +32,29 @@ Content:
 
             evidence_number += 1
 
+    if uploaded_results:
+        context_parts.append("SESSION UPLOAD EVIDENCE")
+
+        for result in uploaded_results:
+            location = (
+                f"Page: {result['page']}"
+                if result.get("page") is not None
+                else f"Location: {result.get('section') or 'not available'}"
+            )
+            context_parts.append(
+                f"""
+[EVIDENCE {evidence_number}]
+
+Source: {result.get('source', '')}
+{location}
+Similarity Score: {result.get('score', 0.0):.4f}
+
+Content:
+{result.get('text', '')}
+"""
+            )
+            evidence_number += 1
+
     if web_results:
         context_parts.append("\nTRUSTED WEB EVIDENCE")
 
@@ -52,6 +78,31 @@ Content:
         return "No relevant evidence was retrieved."
 
     return "\n".join(context_parts)
+
+
+def extract_evidence_sources(context):
+    """Return the source metadata attached to each evidence ID in the context."""
+    sources = []
+    for block in re.split(r"(?=\[EVIDENCE\s+\d+\])", context):
+        evidence = re.search(r"\[EVIDENCE\s+(\d+)\]", block, re.I)
+        source = re.search(r"^(?:Source|Title):\s*(.+)$", block, re.M)
+        page = re.search(r"^Page:\s*(.+)$", block, re.M)
+        location = re.search(r"^Location:\s*(.+)$", block, re.M)
+        url = re.search(r"^URL:\s*(https?://\S+)\s*$", block, re.M)
+        if not evidence or not source:
+            continue
+        reference = {
+            "evidence_id": evidence.group(1),
+            "source": source.group(1).strip(),
+        }
+        if page and page.group(1).strip():
+            reference["location"] = f"Page {page.group(1).strip()}"
+        elif location and location.group(1).strip():
+            reference["location"] = location.group(1).strip()
+        if url:
+            reference["url"] = url.group(1)
+        sources.append(reference)
+    return sources
 
 
 if __name__ == "__main__":
