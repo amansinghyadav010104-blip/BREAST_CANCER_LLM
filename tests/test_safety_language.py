@@ -14,6 +14,11 @@ from src.rag.user_mode import UserMode
 
 
 class SafetyAndLanguageTests(unittest.TestCase):
+    def setUp(self):
+        provider_patch = patch.object(llm_generator, "LLM_PROVIDER", "gemini")
+        provider_patch.start()
+        self.addCleanup(provider_patch.stop)
+
     def test_breast_cancer_scope_and_unrelated_cancers(self):
         self.assertTrue(check_cancer_scope("What is breast cancer?")["in_scope"])
         self.assertTrue(check_cancer_scope("what is brest cancer")["in_scope"])
@@ -68,7 +73,7 @@ class SafetyAndLanguageTests(unittest.TestCase):
             "Interaction", (), {"output_text": "Breast cancer is a disease. [Evidence 1]"}
         )()
         with patch.object(
-            llm_generator.client.interactions, "create", return_value=interaction
+            llm_generator.client.models, "generate_content", return_value=interaction
         ):
             with self.assertRaises(AnswerLanguageGenerationError):
                 llm_generator.generate_answer(
@@ -82,7 +87,7 @@ class SafetyAndLanguageTests(unittest.TestCase):
             "Interaction", (), {"output_text": "## Answer\nBreast cancer is a disease. [Evidence 1]"}
         )()
         with patch.object(
-            llm_generator.client.interactions, "create", return_value=interaction
+            llm_generator.client.models, "generate_content", return_value=interaction
         ) as create:
             llm_generator.generate_answer(
                 "What is breast cancer?",
@@ -91,7 +96,7 @@ class SafetyAndLanguageTests(unittest.TestCase):
                 answer_language=AnswerLanguage.ENGLISH,
             )
 
-        prompt = create.call_args.kwargs["input"]
+        prompt = create.call_args.kwargs["contents"]
         self.assertIn("Clinical Support Mode", prompt)
         self.assertIn("medically precise and professional language", prompt)
 

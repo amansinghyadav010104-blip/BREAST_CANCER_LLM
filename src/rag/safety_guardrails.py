@@ -33,6 +33,10 @@ MESSAGES = {
         "Relevant breast cancer evidence was retrieved, but a reliable answer could not be generated right now. Please try again later. For treatment decisions, consult your oncologist.",
         "स्तन कैंसर से संबंधित साक्ष्य मिले, लेकिन अभी विश्वसनीय उत्तर तैयार नहीं हो सका। कृपया बाद में फिर कोशिश करें। उपचार संबंधी निर्णयों के लिए अपने कैंसर विशेषज्ञ से सलाह लें।",
     ),
+    "emergency": (
+        "If this may be a medical emergency, contact your local emergency services or go to the nearest emergency department now. Do not wait for this assistant.",
+        "यदि यह चिकित्सा आपातस्थिति हो सकती है, तो अभी स्थानीय आपातकालीन सेवाओं से संपर्क करें या निकटतम आपातकालीन विभाग जाएँ। इस सहायक के उत्तर की प्रतीक्षा न करें।",
+    ),
 }
 
 
@@ -56,6 +60,20 @@ def check_safety(query, answer_language=AnswerLanguage.ENGLISH):
     """
 
     query = query.casefold().strip()
+
+    emergency_keywords = (
+        "medical emergency", "emergency", "urgent medical help", "can't breathe",
+        "cannot breathe", "difficulty breathing", "severe bleeding", "unconscious",
+        "चिकित्सा आपातस्थिति", "आपातकाल", "सांस लेने में कठिनाई", "साँस लेने में कठिनाई",
+        "सांस नहीं ले", "साँस नहीं ले", "बेहोश", "बहुत खून बह",
+    )
+    if any(keyword in query for keyword in emergency_keywords):
+        risk_type = "emergency"
+        return {
+            "safe": False,
+            "risk_type": risk_type,
+            "message": localized_safety_message(risk_type, answer_language),
+        }
 
     diagnosis_keywords = [
         "do i have cancer",

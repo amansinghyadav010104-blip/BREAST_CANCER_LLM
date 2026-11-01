@@ -22,9 +22,22 @@ pip install -r requirements.txt
 
 Create a `.env` file in the repository root (never commit it):
 ```dotenv
+LLM_PROVIDER=gemini
 GEMINI_API_KEY=your_gemini_api_key
+GEMINI_MODEL=gemini-3.8-flash
+GEMINI_FALLBACK_MODEL=gemini-3.6-flash
+REQUEST_BUDGET_SECONDS=60
+GEMINI_TIMEOUT_SECONDS=45
 TAVILY_API_KEY=your_tavily_api_key
 ```
+
+`REQUEST_BUDGET_SECONDS` limits the full safety, retrieval, and answer-generation
+request. `GEMINI_TIMEOUT_SECONDS` caps an individual Gemini request; the overall
+request budget takes precedence. The configured model is attempted once, then
+the application can fail over once to `GEMINI_FALLBACK_MODEL` for transient
+timeouts, rate limits, or provider failures. Both models use the Gemini API.
+`google-genai` is pinned to the tested 2.28.0 SDK release, and `LLM_PROVIDER`
+is fixed to `gemini`.
 
 ## Build the local knowledge base
 Run commands from the repository root:
@@ -52,6 +65,10 @@ Run the automated tests with:
 ```powershell
 python -m unittest discover -s tests -v
 ```
+
+On Ubuntu, create and activate the environment with `python3 -m venv .venv`,
+then run `source .venv/bin/activate`, `python -m pip install --upgrade pip`,
+`pip install -r requirements.txt`, and `streamlit run app/streamlit_app.py`.
 
 ## Offline RAG evaluation
 Run the fixed 39-question evaluation set from the repository root:

@@ -7,8 +7,10 @@ from .hybrid_retriever import hybrid_retrieve
 from .llm_generator import (
     ApplicationDeadlineError,
     AnswerGenerationError,
+    REQUEST_BUDGET_SECONDS,
     ProviderTimeoutError,
     QueryTranslationError,
+    _provider_error_category,
     generate_answer,
 )
 from .safety_guardrails import check_safety
@@ -18,15 +20,15 @@ from .safety_guardrails import insufficient_evidence_message, localized_safety_m
 from .cancer_scope import normalize_breast_spelling
 
 logger = logging.getLogger(__name__)
-REQUEST_BUDGET_SECONDS = 30.0
 
 
 def _log_stage_timings(timings):
     labels = (
-        "retrieval", "translation", "model_initialization", "embedding",
+        "safety", "retrieval", "query_normalization", "translation", "model_initialization", "embedding",
         "index_load", "document_load", "faiss_search",
-        "uploaded_search", "web_search", "context_construction", "provider_generation",
-        "validation", "generation", "total",
+        "uploaded_search", "web_search", "context_construction", "prompt_preparation",
+        "model_load", "provider_prompt_eval", "provider_token_generation",
+        "provider_generation", "validation", "generation", "total",
     )
     print("Request stage timings (seconds):")
     for stage in labels:
@@ -38,6 +40,7 @@ def _evidence_extract(context, language, question=""):
     """Build a clearly labeled extract using only quoted retrieved evidence."""
     blocks = re.split(r"(?=\[EVIDENCE\s+\d+\])", context)
     items = []
+    item_by_sentence = {}
     query_terms = set()
     for raw_term in re.findall(r"[a-zA-Z]{4,}", question):
         term = raw_term.casefold()
@@ -60,7 +63,9 @@ def _evidence_extract(context, language, question=""):
         if overview:
             text = text[overview.end():]
         sentences = re.split(r"(?<=[.!?])\s+", text)
-        selected = []
+        reference = (source.group(1).strip() if source else "Source details unavailable")
+        reference_location = location.group(1).strip() if location and location.group(1).strip() else ""
+        reference_key = (reference.casefold(), reference_location.casefold())
         for sentence in sentences:
             sentence = sentence.strip(" \t\r\n-•")
             if len(sentence) < 24 or len(sentence) > 400:
@@ -77,18 +82,22 @@ def _evidence_extract(context, language, question=""):
             sentence_terms |= {term[:-1] for term in sentence_terms if term.endswith("s")}
             if query_terms and not query_terms.intersection(sentence_terms):
                 continue
-            selected.append(sentence)
-            if len(selected) >= 2:
-                break
-        if not selected:
-            continue
-        reference = (source.group(1).strip() if source else "Source details unavailable")
-        if location and location.group(1).strip():
-            reference += f", {location.group(1).strip()}"
-        items.extend((sentence, evidence_id, reference) for sentence in selected)
-        if len(items) >= 3:
-            items = items[:3]
-            break
+            sentence_key = re.sub(r"[^\w]+", " ", sentence.casefold()).strip()
+            item = item_by_sentence.get(sentence_key)
+            if item is None:
+                if len(items) >= 3:
+                    continue
+                item = {"sentence": sentence, "evidence_ids": [], "references": {}}
+                item_by_sentence[sentence_key] = item
+                items.append(item)
+            if evidence_id not in item["evidence_ids"]:
+                item["evidence_ids"].append(evidence_id)
+            reference_entry = item["references"].setdefault(
+                reference_key,
+                {"source": reference, "location": reference_location, "evidence_ids": []},
+            )
+            if evidence_id not in reference_entry["evidence_ids"]:
+                reference_entry["evidence_ids"].append(evidence_id)
     if not items:
         return None
     if AnswerLanguage(language) == AnswerLanguage.HINDI:
@@ -104,9 +113,26 @@ def _evidence_extract(context, language, question=""):
         safety = "This is an extract from retrieved sources, not a verified generated answer. Consult your care team for personal decisions."
         sources_heading = "### Sources"
     lines = [heading, ""]
-    lines.extend(f"- {sentence} [Evidence {number}]" for sentence, number, _ in items)
+    lines.extend(
+        f"- {item['sentence']} " + " ".join(
+            f"[Evidence {evidence_id}]" for evidence_id in item["evidence_ids"]
+        )
+        for item in items
+    )
     lines.extend(["", safety, "", sources_heading])
-    lines.extend(f"- {reference} [Evidence {number}]" for _, number, reference in items)
+    seen_references = set()
+    for item in items:
+        for reference_key, reference in item["references"].items():
+            if reference_key in seen_references:
+                continue
+            seen_references.add(reference_key)
+            label = reference["source"]
+            if reference["location"]:
+                label += f", {reference['location']}"
+            citations = " ".join(
+                f"[Evidence {evidence_id}]" for evidence_id in reference["evidence_ids"]
+            )
+            lines.append(f"- {label} {citations}")
     return "\n".join(lines)
 
 
@@ -188,7 +214,7 @@ def run_rag_pipeline(
             "generation_status": "not_attempted",
             "generation_failure": "retrieval_timeout",
             "answer": localized_safety_message("generation_unavailable", answer_language)
-            + "\n\nThe request exceeded its 30-second time limit during retrieval.",
+            + f"\n\nThe request exceeded the {REQUEST_BUDGET_SECONDS:g}-second time limit during retrieval.",
             "context": "",
             "timings": timings,
         }
@@ -216,14 +242,16 @@ def run_rag_pipeline(
             "timings": timings,
         }
 
-    # Step 3: Generate answer using Gemini
+    # Step 3: Generate an answer with Gemini
     print("\nGenerating answer with Gemini...")
     start = time.perf_counter()
     generation_timings = {}
 
     try:
         if time.perf_counter() >= deadline:
-            raise ApplicationDeadlineError("The 30-second request budget expired during retrieval.")
+            raise ApplicationDeadlineError(
+                f"The {REQUEST_BUDGET_SECONDS:g}-second request budget expired during retrieval."
+            )
         answer = generate_answer(
             normalize_breast_spelling(question),
             context,
@@ -243,16 +271,20 @@ def run_rag_pipeline(
             fallback_answer = extract
             source = "evidence_extract"
             if isinstance(error, ProviderTimeoutError):
-                fallback_answer += "\n\nGeneration did not complete within the request time limit."
+                fallback_answer += (
+                    f"\n\nGemini did not complete within the configured "
+                    f"{REQUEST_BUDGET_SECONDS:g}-second request time limit."
+                )
         elif isinstance(error, ProviderTimeoutError):
             fallback_answer = (
                 localized_safety_message("generation_unavailable", answer_language)
-                + "\n\nGeneration exceeded the 30-second request limit, and the retrieved passages could not be safely summarized."
+                + f"\n\nGeneration exceeded the {REQUEST_BUDGET_SECONDS:g}-second request limit, and the retrieved passages could not be safely summarized."
             )
             source = "generation_timeout"
         else:
             fallback_answer = localized_safety_message("generation_unavailable", answer_language)
             source = "generation_unavailable"
+        provider_failure = _provider_error_category(error)
         return {
             "question": question,
             "mode": mode.value,
@@ -263,7 +295,7 @@ def run_rag_pipeline(
                 if isinstance(error, ApplicationDeadlineError)
                 else "provider_timeout"
                 if isinstance(error, ProviderTimeoutError)
-                else "provider_error"
+                else provider_failure
             ),
             "answer": fallback_answer,
             "context": context,
@@ -294,6 +326,10 @@ def run_rag_pipeline(
         "uploaded_search",
         "web_search",
         "context_construction",
+        "prompt_preparation",
+        "model_load",
+        "provider_prompt_eval",
+        "provider_token_generation",
         "provider_generation",
         "validation",
     ):

@@ -19,7 +19,6 @@ from src.rag.answer_language import AnswerLanguageGenerationError
 from src.rag.document_ingestion import get_or_embed_uploaded_chunks
 from src.rag.speech_component import speech_controls
 from src.rag.local_retriever import get_embedding_model
-
 st.set_page_config(
     page_title="Breast Cancer AI Assistant",
     page_icon="🎗️",
@@ -86,12 +85,24 @@ for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
         if message["role"] == "assistant":
+            generation_status = message.get("generation_status")
+            if generation_status == "fallback":
+                st.caption("Evidence extract · Gemini did not return a verified answer")
+                failure = message.get("generation_failure")
+                if failure in {"provider_timeout", "application_deadline"}:
+                    st.info("Gemini took too long to respond. This extract comes from retrieved sources.")
+                else:
+                    st.info("Gemini could not generate an answer. This extract comes from retrieved sources.")
+            elif generation_status == "generated":
+                st.caption("Generated answer · grounded in retrieved evidence")
             sources = message.get("sources", [])
             if sources:
                 with st.expander(f"Retrieved sources ({len(sources)})"):
                     for source in sources:
+                        evidence_ids = source.get("evidence_ids") or [source["evidence_id"]]
+                        evidence_label = ", ".join(evidence_ids)
                         reference = (
-                            f"Evidence {source['evidence_id']}: {source['source']}"
+                            f"Evidence {evidence_label}: {source['source']}"
                         )
                         if source.get("location"):
                             reference += f" — {source['location']}"
@@ -153,11 +164,23 @@ if question:
             )
 
             st.markdown(answer)
+            generation_status = result.get("generation_status", "not_attempted")
+            if generation_status == "fallback":
+                st.caption("Evidence extract · Gemini did not return a verified answer")
+                failure = result.get("generation_failure")
+                if failure == "provider_timeout" or failure == "application_deadline":
+                    st.info("Gemini took too long to respond. The evidence extract below is from retrieved sources and is not a generated answer.")
+                else:
+                    st.info("Gemini could not generate an answer. The evidence extract below is from retrieved sources and is not a generated answer.")
+            elif generation_status == "generated":
+                st.caption("Generated answer · grounded in retrieved evidence")
 
             st.session_state.messages.append({
                 "role": "assistant",
                 "content": answer,
                 "sources": extract_evidence_sources(result.get("context", "")),
+                "generation_status": generation_status,
+                "generation_failure": result.get("generation_failure"),
                 "response_time": result.get("timings", {}).get("total"),
             })
             st.rerun()

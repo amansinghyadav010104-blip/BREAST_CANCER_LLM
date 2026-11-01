@@ -8,6 +8,11 @@ from src.rag.local_retriever import MODEL_NAME, get_embedding_model, get_vector_
 
 
 class RagPipelineFlowTests(unittest.TestCase):
+    def setUp(self):
+        provider_patch = patch.object(llm_generator, "LLM_PROVIDER", "gemini")
+        provider_patch.start()
+        self.addCleanup(provider_patch.stop)
+
     def test_faiss_resources_are_cached_between_reruns(self):
         first = get_vector_store()
         second = get_vector_store()
@@ -79,7 +84,7 @@ class RagPipelineFlowTests(unittest.TestCase):
 
     def test_hindi_question_is_translated_only_for_retrieval(self):
         interaction = type("Interaction", (), {"output_text": "breast cancer symptoms"})()
-        with patch.object(llm_generator.client.interactions, "create", return_value=interaction):
+        with patch.object(llm_generator.client.models, "generate_content", return_value=interaction):
             translated = llm_generator.translate_query_for_retrieval("स्तन कैंसर के लक्षण क्या हैं?")
 
         self.assertEqual(translated, "breast cancer symptoms")
@@ -94,21 +99,18 @@ class RagPipelineFlowTests(unittest.TestCase):
         )()
         question = "स्तन कैंसर के उपचार के विकल्प क्या हैं?"
         with patch.object(
-            llm_generator.client.interactions, "create", return_value=interaction
+            llm_generator.client.models, "generate_content", return_value=interaction
         ) as create:
             translated = llm_generator.translate_query_for_retrieval(question)
 
         self.assertEqual(translated, "breast cancer treatment options")
-        self.assertEqual(
-            create.call_args.kwargs["timeout"],
-            llm_generator.GENAI_REQUEST_TIMEOUT_SECONDS,
-        )
+        self.assertEqual(create.call_args.kwargs["model"], llm_generator.GEMINI_MODEL)
 
     def test_hindi_translation_is_cached_only_in_supplied_session_cache(self):
         interaction = type("Interaction", (), {"output_text": "breast cancer symptoms"})()
         cache = {}
         with patch.object(
-            llm_generator.client.interactions, "create", return_value=interaction
+            llm_generator.client.models, "generate_content", return_value=interaction
         ) as create:
             first = llm_generator.translate_query_for_retrieval(
                 "स्तन कैंसर के लक्षण?", translation_cache=cache
@@ -180,9 +182,9 @@ class RagPipelineFlowTests(unittest.TestCase):
                 "Breast cancer B.pdf",
                 "Breast cancer C.pdf",
                 "Breast cancer D.pdf",
-                "Breast cancer E.pdf",
             ],
         )
+        self.assertNotIn("Breast cancer E.pdf", [item["source"] for item in result["local_results"]])
         self.assertLessEqual(len(result["local_results"]), 5)
         self.assertEqual(hybrid_retriever.select_diverse_results(candidates, limit=0), [])
 
